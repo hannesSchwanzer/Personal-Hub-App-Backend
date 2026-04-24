@@ -23,6 +23,7 @@ class IngredientEntity(BaseModel):
     quantity: float
     unit: UnitType
 
+
 class StepIngredientEntity(BaseModel):
     name: str
     quantityPercent: float
@@ -46,4 +47,5 @@ class RecipeEntity(BaseModel):
     cookingTimeMinutes: int
     preparationTimeMinutes: int
     nutritionInfo: NutritionInfoEntity
+    imageUrl: Optional[str]
 

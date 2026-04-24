@@ -1,11 +1,19 @@
 import logging
-from typing import Annotated, List
+from typing import List
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.models.recipe import RecipeEntity, IngredientEntity, StepEntity, StepIngredientEntity, NutritionInfoEntity
+from app.models.recipe import (
+    RecipeEntity,
+    IngredientEntity,
+    StepEntity,
+    StepIngredientEntity,
+    NutritionInfoEntity,
+)
 from app.services.recipe_generator import RecipeGeneratorService
+from app.services.recipe_parser import RecipeParserService
 
 router = APIRouter(prefix="/recipe", tags=["recipe"])
-service = RecipeGeneratorService()
+generation_service = RecipeGeneratorService()
+parser_service = RecipeParserService()
 
 logger = logging.getLogger(__name__)
 
@@ -26,11 +34,12 @@ logger = logging.getLogger(__name__)
 #     return recipe
 
 
-@router.post("/generate-recipe", response_model=RecipeEntity)
-async def generate_recipe(
+@router.post("/generate/images", response_model=RecipeEntity)
+async def generate_recipe_from_images(
     files: List[UploadFile] = File(...),
     input_language: str | None = None,
     output_language: str | None = None,
+    keep_original_size: bool = False,
 ):
     logger.info(
         f"/generate-recipe request received. input_language=%r, output_language=%r",
@@ -55,25 +64,31 @@ async def generate_recipe(
 
         image_files.append((image_bytes, file.content_type))
 
-    logger.info(f"mime types of uploaded files: {[file.content_type for file in files]}")
+    logger.info(
+        f"mime types of uploaded files: {[file.content_type for file in files]}"
+    )
 
     if len(image_files) == 0:
         raise HTTPException(status_code=400, detail="No valid image files uploaded.")
     elif len(image_files) == 1:
-        recipe = await service.generate_recipe_from_image(
+        recipe = await generation_service.generate_recipe_from_image(
             image_files[0][0],
             image_files[0][1],
             input_language=input_language,
             output_language=output_language,
+            resize=not keep_original_size,
         )
     else:
-        recipe = await service.generate_recipe_from_images(
-            image_files, input_language=input_language, output_language=output_language
+        recipe = await generation_service.generate_recipe_from_images(
+            image_files,
+            input_language=input_language,
+            output_language=output_language,
+            resize=not keep_original_size,
         )
     return recipe
 
 
-@router.post("/generate-recipe-dummy", response_model=RecipeEntity)
+@router.post("/generate/images-dummy", response_model=RecipeEntity)
 async def generate_recipe_dummy(
     files: List[UploadFile] = File(...),
     input_language: str | None = None,
@@ -97,12 +112,16 @@ async def generate_recipe_dummy(
         IngredientEntity(name="gemahlener Koriander", quantity=0.75, unit="teaspoons"),
         IngredientEntity(name="gemahlene Kurkuma", quantity=1.0, unit="pieces"),
         IngredientEntity(name="rotes Chilipulver", quantity=0.5, unit="teaspoons"),
-        IngredientEntity(name="gemahlener Kreuzkümmel", quantity=0.75, unit="teaspoons"),
+        IngredientEntity(
+            name="gemahlener Kreuzkümmel", quantity=0.75, unit="teaspoons"
+        ),
         IngredientEntity(name="Garam masala", quantity=1.5, unit="teaspoons"),
         IngredientEntity(name="rote Paprikaschote", quantity=1.0, unit="pieces"),
         IngredientEntity(name="grüne Bohnen", quantity=75.0, unit="grams"),
         IngredientEntity(name="Wachsbohnen aus der Dose", quantity=400.0, unit="grams"),
-        IngredientEntity(name="gehackte Korianderblätter", quantity=2.0, unit="tablespoons"),
+        IngredientEntity(
+            name="gehackte Korianderblätter", quantity=2.0, unit="tablespoons"
+        ),
         IngredientEntity(name="Wasser", quantity=300.0, unit="milliliters"),
     ]
 
@@ -115,11 +134,11 @@ async def generate_recipe_dummy(
                 StepIngredientEntity(name="Curryblätter", quantityPercent=100.0),
                 StepIngredientEntity(name="Bockshornsamen", quantityPercent=100.0),
             ],
-            instruction="Das Pflanzenöl in einem Karahi (indische Metallpfanne) oder Wok erhitzen. Senfkörner, Curryblätter und Bockshornsamen hineingeben. Nach etwa 30 Sekunden duften die Gewürze nussig."
+            instruction="Das Pflanzenöl in einem Karahi (indische Metallpfanne) oder Wok erhitzen. Senfkörner, Curryblätter und Bockshornsamen hineingeben. Nach etwa 30 Sekunden duften die Gewürze nussig.",
         ),
         StepEntity(
             ingredients=[StepIngredientEntity(name="Zwiebeln", quantityPercent=100.0)],
-            instruction="Die Zwiebeln hinzufügen und bei schwacher Hitze etwa 10 Minuten anschwitzen."
+            instruction="Die Zwiebeln hinzufügen und bei schwacher Hitze etwa 10 Minuten anschwitzen.",
         ),
         StepEntity(
             ingredients=[
@@ -127,53 +146,60 @@ async def generate_recipe_dummy(
                 StepIngredientEntity(name="Knoblauchzehen", quantityPercent=100.0),
                 StepIngredientEntity(name="grüne Chilischoten", quantityPercent=100.0),
             ],
-            instruction="Ingwer, Knoblauch und Chilischoten unterrühren und braten, bis die Zwiebeln goldbraun gebacken haben."
+            instruction="Ingwer, Knoblauch und Chilischoten unterrühren und braten, bis die Zwiebeln goldbraun gebacken haben.",
         ),
         StepEntity(
             ingredients=[StepIngredientEntity(name="Tomaten", quantityPercent=100.0)],
-            instruction="Die Temperatur etwas erhöhen. Die Tomaten in den Topf geben und garen, bis die Mischung dick und dunkler geworden ist."
+            instruction="Die Temperatur etwas erhöhen. Die Tomaten in den Topf geben und garen, bis die Mischung dick und dunkler geworden ist.",
         ),
         StepEntity(
             ingredients=[
                 StepIngredientEntity(name="Möhre", quantityPercent=100.0),
-                StepIngredientEntity(name="gemahlener Koriander", quantityPercent=100.0),
+                StepIngredientEntity(
+                    name="gemahlener Koriander", quantityPercent=100.0
+                ),
                 StepIngredientEntity(name="gemahlene Kurkuma", quantityPercent=100.0),
                 StepIngredientEntity(name="rotes Chilipulver", quantityPercent=100.0),
-                StepIngredientEntity(name="gemahlener Kreuzkümmel", quantityPercent=100.0),
+                StepIngredientEntity(
+                    name="gemahlener Kreuzkümmel", quantityPercent=100.0
+                ),
                 StepIngredientEntity(name="Garam masala", quantityPercent=100.0),
             ],
-            instruction="Die Möhre hinzufügen, dann gemahlenen Koriander, Kurkuma, Chilipulver, Kreuzkümmel und Garam masala darüberstreuen. Die Zutaten 1 Minute braten."
+            instruction="Die Möhre hinzufügen, dann gemahlenen Koriander, Kurkuma, Chilipulver, Kreuzkümmel und Garam masala darüberstreuen. Die Zutaten 1 Minute braten.",
         ),
         StepEntity(
             ingredients=[StepIngredientEntity(name="Wasser", quantityPercent=50.0)],
-            instruction="150 ml heißes Wasser dazugießen und zugedeckt 10–15 Minuten köcheln lassen, bis die Möhren fast weich sind."
+            instruction="150 ml heißes Wasser dazugießen und zugedeckt 10–15 Minuten köcheln lassen, bis die Möhren fast weich sind.",
         ),
         StepEntity(
             ingredients=[
                 StepIngredientEntity(name="rote Paprikaschote", quantityPercent=100.0),
                 StepIngredientEntity(name="grüne Bohnen", quantityPercent=100.0),
             ],
-            instruction="Paprikaschote und grüne Bohnen unterrühren und alles ohne Deckel etwa 10 Minuten weitergaren, bis die Gemüse weich sind."
+            instruction="Paprikaschote und grüne Bohnen unterrühren und alles ohne Deckel etwa 10 Minuten weitergaren, bis die Gemüse weich sind.",
         ),
         StepEntity(
             ingredients=[
-                StepIngredientEntity(name="Wachsbohnen aus der Dose", quantityPercent=100.0),
+                StepIngredientEntity(
+                    name="Wachsbohnen aus der Dose", quantityPercent=100.0
+                ),
                 StepIngredientEntity(name="Wasser", quantityPercent=50.0),
             ],
-            instruction="Die Wachsbohnen sowie weitere 150 ml heißes Wasser hinzufügen und das Curry mit halb aufgelegtem Deckel noch einmal 10 Minuten garen; falls nötig zwischendurch etwas Wasser zugeben."
+            instruction="Die Wachsbohnen sowie weitere 150 ml heißes Wasser hinzufügen und das Curry mit halb aufgelegtem Deckel noch einmal 10 Minuten garen; falls nötig zwischendurch etwas Wasser zugeben.",
         ),
         StepEntity(
-            ingredients=[StepIngredientEntity(name="gehackte Korianderblätter", quantityPercent=100.0)],
-            instruction="Das Gericht mit dem gehackten Koriander garnieren und servieren, dazu gekochten Reis reichen."
+            ingredients=[
+                StepIngredientEntity(
+                    name="gehackte Korianderblätter", quantityPercent=100.0
+                )
+            ],
+            instruction="Das Gericht mit dem gehackten Koriander garnieren und servieren, dazu gekochten Reis reichen.",
         ),
     ]
 
     # Build NutritionInfoEntity
     nutrition_info = NutritionInfoEntity(
-        calories=None,
-        carbohydratesGrams=None,
-        proteinGrams=None,
-        fatGrams=None
+        calories=None, carbohydratesGrams=None, proteinGrams=None, fatGrams=None
     )
 
     return RecipeEntity(
@@ -184,7 +210,38 @@ async def generate_recipe_dummy(
         servings=4,
         cookingTimeMinutes=35,
         preparationTimeMinutes=15,
-        nutritionInfo=nutrition_info
+        nutritionInfo=nutrition_info,
+        imageUrl=None
     )
 
+
+@router.post("/generate/url", response_model=RecipeEntity)
+async def generate_recipe_from_url(
+    url: str,
+    use_ai: bool = False,
+    input_language: str | None = None,
+    output_language: str | None = None,
+):
+    if use_ai:
+        recipe = await generation_service.generate_recipe_from_url(url, input_language=input_language, output_language=output_language)
+    else:
+        recipe = parser_service.extract_recipe_from_url(url)
+    
+    if recipe is None:
+        raise HTTPException(status_code=400, detail="Could not extract recipe from the provided URL.")
+
+    return recipe
+
+@router.post("/generate/text", response_model=RecipeEntity)
+async def generate_recipe_from_text(
+    recipe_text: str,
+    input_language: str | None = None,
+    output_language: str | None = None,
+):
+    recipe = await generation_service.generate_recipe_from_str(recipe_text, input_language=input_language, output_language=output_language)
+    
+    if recipe is None:
+        raise HTTPException(status_code=400, detail="Could not extract recipe from the provided URL.")
+
+    return recipe
 
