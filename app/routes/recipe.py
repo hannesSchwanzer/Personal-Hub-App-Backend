@@ -222,6 +222,13 @@ async def generate_recipe_from_url(
     input_language: str | None = None,
     output_language: str | None = None,
 ):
+    logger.info(
+        f"/generate/url request received. url=%r, use_ai=%r, input_language=%r, output_language=%r",
+        url,
+        use_ai,
+        input_language,
+        output_language,
+    )
     if use_ai:
         recipe = await generation_service.generate_recipe_from_url(url, input_language=input_language, output_language=output_language)
     else:
@@ -238,6 +245,11 @@ async def generate_recipe_from_text(
     input_language: str | None = None,
     output_language: str | None = None,
 ):
+    logger.info(
+        f"/generate/text request received. input_language=%r, output_language=%r",
+        input_language,
+        output_language,
+    )
     recipe = await generation_service.generate_recipe_from_str(recipe_text, input_language=input_language, output_language=output_language)
     
     if recipe is None:

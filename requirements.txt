@@ -3,3 +3,7 @@ uvicorn
 pillow
 beautifulsoup4
 requests
+openai
+github-copilot-sdk
+isodate
+python-multipart
