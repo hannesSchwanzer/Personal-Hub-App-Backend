@@ -1,16 +1,17 @@
 import requests
 from bs4 import BeautifulSoup
 import json
+from playwright.async_api import async_playwright
 
 class RecipeExtractorService:
 
     @staticmethod
-    def extract_recipe_auto(url: str):
+    async def extract_recipe_auto(url: str):
         """
         Extracts recipe from a website URL.
         Returns a dict with extracted recipe, or raw text as fallback.
         """
-        html = RecipeExtractorService._html_from_url(url)
+        html = await RecipeExtractorService._html_from_url(url)
 
         structured_recipe = RecipeExtractorService._extract_structured_recipe_from_html(html)
         if structured_recipe:
@@ -20,46 +21,67 @@ class RecipeExtractorService:
         return RecipeExtractorService._extract_recipe_text_from_html(html)
 
     @staticmethod
-    def extract_recipe_structured(url: str):
-        html = RecipeExtractorService._html_from_url(url)
+    async def extract_recipe_structured(url: str):
+        html = await RecipeExtractorService._html_from_url(url)
 
         structured_recipe = RecipeExtractorService._extract_structured_recipe_from_html(html)
         return structured_recipe
 
     @staticmethod
-    def extract_recipe_text(url: str):
-        html = RecipeExtractorService._html_from_url(url)
+    async def extract_recipe_text(url: str):
+        html = await RecipeExtractorService._html_from_url(url)
         return RecipeExtractorService._extract_recipe_text_from_html(html)
 
     @staticmethod
     def _extract_structured_recipe_from_html(html: str):
-        # Attempt to extract structured recipe JSON-LD
         soup = BeautifulSoup(html, 'html.parser')
         scripts = soup.find_all('script', type='application/ld+json')
-        # Disabled extraction of structured recipe data, only fallback to text
+
         for script in scripts:
             try:
-                if script.string:
-                    data = json.loads(script.string)
-                    # JSON-LD can be a list or dict
-                    if isinstance(data, list):
-                        for entry in data:
-                            if entry.get('@type') == 'Recipe':
-                                return {'type': 'structured', 'data': entry}
-                    elif isinstance(data, dict):
-                        if data.get('@type') == 'Recipe':
-                            return {'type': 'structured', 'data': data}
+                if not script.string:
+                    continue
+
+                data = json.loads(script.string)
+
+                # Normalize to list
+                if isinstance(data, dict):
+                    data = [data]
+
+                for entry in data:
+                    # 🔥 NEW: handle @graph
+                    if isinstance(entry, dict) and '@graph' in entry:
+                        for item in entry['@graph']:
+                            if item.get('@type') == 'Recipe':
+                                return {'type': 'structured', 'data': item}
+
+                    # Existing checks
+                    if entry.get('@type') == 'Recipe':
+                        return {'type': 'structured', 'data': entry}
+
             except Exception:
                 continue
 
         return None
 
     @staticmethod
-    def _html_from_url(url: str):
-        response = requests.get(url)
+    async def _html_from_url(url: str):
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                          "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        response = requests.get(url, headers=headers)
         html = response.text
         return html
-
+        # async with async_playwright() as p:
+        #     browser = await p.chromium.launch(headless=True)
+        #     page = await browser.new_page()
+        #     await page.goto(url, timeout=60000)
+        #     await page.wait_for_load_state("networkidle")
+        #     html = await page.content()
+        #     await browser.close()
+        #     return html
 
     @staticmethod
     def _extract_recipe_text_from_html(html: str):

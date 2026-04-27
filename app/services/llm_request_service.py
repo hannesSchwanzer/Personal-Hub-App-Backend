@@ -238,7 +238,7 @@ class OpenRouterRequestService(LlmRequestService):
         for image_bytes, mime_type in zip(
             processed_images, [img[1] for img in images_with_mime_types]
         ):
-            image_data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode("utf-8")}"
+            image_data_url = f"data:{mime_type};base64,{base64.b64encode(image_bytes).decode('utf-8')}"
             content.append(
                 {
                     "type": "image_url",

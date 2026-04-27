@@ -65,8 +65,8 @@ class RecipeParserService:
     def __init__(self) -> None:
         self.recipe_extractor_service = RecipeExtractorService()
 
-    def extract_recipe_from_url(self, url: str):
-        structured_recipe = self.recipe_extractor_service.extract_recipe_structured(url)
+    async def extract_recipe_from_url(self, url: str):
+        structured_recipe = await self.recipe_extractor_service.extract_recipe_structured(url)
         return RecipeParserService.extract_recipe_from_structured_data(structured_recipe)
 
     @staticmethod
@@ -83,12 +83,12 @@ class RecipeParserService:
         )
 
         for ingredient_line in recipe_ingredients:
-            parsed_name, parsed_qty, parsed_unit = RecipeParserService._parse_ingredient(
+            parsed_name, parsed_qty, parsed_unit, additional_info = RecipeParserService._parse_ingredient(
                 ingredient_line
             )
             ingredients.append(
                 IngredientEntity(
-                    name=parsed_name, quantity=parsed_qty, unit=parsed_unit
+                    name=parsed_name, quantity=parsed_qty, unit=parsed_unit, additionalInfo=additional_info
                 )
             )
 
@@ -105,13 +105,21 @@ class RecipeParserService:
         nutrition = data.get("nutrition", {})
         nutrition_entity = NutritionInfoEntity(
             calories=RecipeParserService._parse_int(nutrition.get("calories", 0)),
-            carbohydratesGrams=RecipeParserService._parse_float(
-                nutrition.get("carbohydrateContent", 0)
-            ),
-            proteinGrams=RecipeParserService._parse_float(
-                nutrition.get("proteinContent", 0)
-            ),
+            carbohydratesGrams=RecipeParserService._parse_float(nutrition.get("carbohydrateContent", 0)),
+            sugarGrams=RecipeParserService._parse_float(nutrition.get("sugarContent", 0)),
+            proteinGrams=RecipeParserService._parse_float(nutrition.get("proteinContent", 0)),
             fatGrams=RecipeParserService._parse_float(nutrition.get("fatContent", 0)),
+            saturatedFatGrams=RecipeParserService._parse_float(nutrition.get("saturatedFatContent", 0)),
+            sodiumMilligrams=RecipeParserService._parse_float(nutrition.get("sodiumContent", 0)),
+            fiberGrams=RecipeParserService._parse_float(nutrition.get("fiberContent", 0)),
+        )
+
+        # DURATION ENTITY
+        from app.models.recipe import DurationEntity
+        duration_entity = DurationEntity(
+            prepTimeMinutes=RecipeParserService._parse_duration(data.get("prepTime", "0")),
+            cookTimeMinutes=RecipeParserService._parse_duration(data.get("cookTime", data.get("totalTime", "0"))),
+            restTimeMinutes=RecipeParserService._parse_duration(data.get("restTime", "0")),
         )
 
         # RECIPE ENTITY
@@ -121,12 +129,7 @@ class RecipeParserService:
             ingredients=ingredients,
             steps=steps,
             servings=RecipeParserService._parse_int(data.get("recipeYield", 0)),
-            cookingTimeMinutes=RecipeParserService._parse_duration(
-                data.get("cookTime", data.get("totalTime", "0"))
-            ),
-            preparationTimeMinutes=RecipeParserService._parse_duration(
-                data.get("prepTime", "0")
-            ),
+            duration=duration_entity,
             nutritionInfo=nutrition_entity,
             imageUrl=None,
         )
@@ -199,6 +202,7 @@ class RecipeParserService:
         amount = 1.0
         unit = UnitType.pieces
         name = s
+        additional_info = None
         if match:
             qty_str, unit_str, raw_name = match.groups()
             # Quantity: accepts whole, decimal, or fraction
@@ -221,15 +225,22 @@ class RecipeParserService:
                 )
             # Name cleanup
             name = raw_name.strip()
-            # Remove trailing (something), e.g. Gurke(n)
-            name = re.sub(r"\s*\([^)]*\)$", "", name)
+            # Extract additional info in parenthesis at the end, only if preceded by space
+            add_info_match = re.search(r"\s\(([^)]*)\)$", name)
+            if add_info_match:
+                additional_info = add_info_match.group(1).strip()
+                name = name[:add_info_match.start()].rstrip()
+            # Remove word-endings like Gurke(n) only if directly after a word
+            name = re.sub(r"([a-zA-ZäöüÄÖÜß]+)\((s|n)\)", r"\1", name)
+            # Remove leading parenthesis artifacts (e.g. '(n) Salz')
+            name = re.sub(r"^\([^)]*\)\s*", "", name)
             name = re.sub(r"\(s\)$", "", name, flags=re.IGNORECASE).strip()
             # Fallback: never let name be empty
             if not name:
                 name = s
         else:
             name = s
-        return name, amount, unit
+        return name, amount, unit, additional_info
 
     @staticmethod
     def _extract_step_texts(instructions):

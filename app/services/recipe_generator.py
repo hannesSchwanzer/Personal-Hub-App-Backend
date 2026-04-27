@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional, Tuple
 from app.models.recipe import RecipeEntity, UnitType
 import json
-from app.services.llm_request_service import AutoRequestService
+from app.services.llm_request_service import OpenRouterRequestService
 
 from app.services.recipe_extractor import RecipeExtractorService
 
@@ -14,7 +14,7 @@ class RecipeGeneratorService:
 - Output only valid, raw JSON—no explanations, preamble, markdown, or code blocks.
 - Use the provided JSON schema; do not add, omit, or rename any fields.
 - If a unit in the recipe is not part of the schema, convert it to a valid one.
-- For ingredients that contain preparation steps (e.g., “1 diced onion”), extract as “1 piece onion” in the ingredients, and add a recipe step: “Dice the onion.”
+- For ingredients that contain preparation steps (e.g., “1 diced onion”), put the preparation in the additionalInfo field and use the base ingredient name (e.g., “onion”).
 - If instructions mention ingredients or amounts missing from the ingredient list (e.g., adding 100 ml water), add them to the ingredients.
 - Percent values must be represented as decimal numbers between 0 and 1.
 
@@ -23,7 +23,7 @@ Here is the JSON Schema you must adhere to (do not change its field names or add
 
     def __init__(self):
         self.recipe_extractor_service = RecipeExtractorService()
-        self.llm_request_service = AutoRequestService()
+        self.llm_request_service = OpenRouterRequestService()
 
     async def generate_recipe_from_image(
         self,
@@ -60,7 +60,7 @@ Here is the JSON Schema you must adhere to (do not change its field names or add
         input_language: Optional[str] = None,
         output_language: Optional[str] = None,
     ):
-        recipe_text = self.recipe_extractor_service.extract_recipe_auto(url)
+        recipe_text = await self.recipe_extractor_service.extract_recipe_auto(url)
 
         recipe = await self.generate_recipe_from_str(
             recipe_text=str(recipe_text),

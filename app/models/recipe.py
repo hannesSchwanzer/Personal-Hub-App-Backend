@@ -22,6 +22,7 @@ class IngredientEntity(BaseModel):
     name: str
     quantity: float
     unit: UnitType
+    additionalInfo: Optional[str] = None
 
 
 class StepIngredientEntity(BaseModel):
@@ -35,8 +36,12 @@ class StepEntity(BaseModel):
 class NutritionInfoEntity(BaseModel):
     calories: Optional[int] = None
     carbohydratesGrams: Optional[float] = None
+    sugarGrams: Optional[float] = None
     proteinGrams: Optional[float] = None
     fatGrams: Optional[float] = None
+    saturatedFatGrams: Optional[float] = None
+    sodiumMilligrams: Optional[float] = None
+    fiberGrams: Optional[float] = None
 
 class RecipeEntity(BaseModel):
     name: str
@@ -44,8 +49,12 @@ class RecipeEntity(BaseModel):
     ingredients: List[IngredientEntity]
     steps: List[StepEntity]
     servings: int
-    cookingTimeMinutes: int
-    preparationTimeMinutes: int
-    nutritionInfo: NutritionInfoEntity
-    imageUrl: Optional[str]
+    duration: Optional[DurationEntity] = None
+    nutritionInfo: Optional[NutritionInfoEntity] = None
+    imageUrl: Optional[str] = None
+
+class DurationEntity(BaseModel):
+    prepTimeMinutes: Optional[int] = None
+    cookTimeMinutes: Optional[int] = None
+    restTimeMinutes: Optional[int] = None
 
