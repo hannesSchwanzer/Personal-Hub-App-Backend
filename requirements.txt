@@ -3,6 +3,7 @@ uvicorn
 pillow
 beautifulsoup4
 requests
+tqdm
 openai
 github-copilot-sdk
 isodate

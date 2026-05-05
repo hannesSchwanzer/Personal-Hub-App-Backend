@@ -1,12 +1,11 @@
 import logging
 from typing import List
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from app.models.recipe import (
+from app.schemas.recipe import (
     RecipeEntity,
     IngredientEntity,
     StepEntity,
     StepIngredientEntity,
-    NutritionInfoEntity,
 )
 from app.services.recipe_generator import RecipeGeneratorService
 from app.services.recipe_parser import RecipeParserService

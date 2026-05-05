@@ -1,6 +1,6 @@
 import logging
 from typing import List, Optional, Tuple
-from app.models.recipe import RecipeEntity, UnitType
+from app.schemas.recipe import RecipeEntity, UnitType
 import json
 from app.services.llm_request_service import OpenRouterRequestService
 

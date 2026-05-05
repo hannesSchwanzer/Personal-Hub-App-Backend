@@ -1,13 +1,14 @@
 import re
 
 import isodate
-from app.models.recipe import (
+from app.schemas.recipe import (
     IngredientEntity,
-    NutritionInfoEntity,
     RecipeEntity,
     StepEntity,
     UnitType,
+    DurationEntity
 )
+from app.schemas.nutrition import NutritionEntity
 from app.services.recipe_extractor import RecipeExtractorService
 
 
@@ -103,7 +104,7 @@ class RecipeParserService:
 
         # NUTRITION
         nutrition = data.get("nutrition", {})
-        nutrition_entity = NutritionInfoEntity(
+        nutrition_entity = NutritionEntity(
             calories=RecipeParserService._parse_int(nutrition.get("calories", 0)),
             carbohydratesGrams=RecipeParserService._parse_float(nutrition.get("carbohydrateContent", 0)),
             sugarGrams=RecipeParserService._parse_float(nutrition.get("sugarContent", 0)),
@@ -115,7 +116,6 @@ class RecipeParserService:
         )
 
         # DURATION ENTITY
-        from app.models.recipe import DurationEntity
         duration_entity = DurationEntity(
             prepTimeMinutes=RecipeParserService._parse_duration(data.get("prepTime", "0")),
             cookTimeMinutes=RecipeParserService._parse_duration(data.get("cookTime", data.get("totalTime", "0"))),

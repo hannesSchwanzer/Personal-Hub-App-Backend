@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 
 def get_user_token_copilot() -> str:
     """
@@ -19,3 +20,10 @@ def get_user_token_openrouter() -> str:
     if not token:
         raise RuntimeError("OPENROUTER_API_KEY not set in environment.")
     return token
+
+def get_oauth_fatsecret() -> Tuple[str, str]:
+    client_id = os.environ.get("FATSECRET_CLIENT_ID")
+    client_secret = os.environ.get("FATSECRET_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        raise RuntimeError("FATSECRET_CLIENT_ID and FATSECRET_CLIENT_SECRET must be set in environment.")
+    return client_id, client_secret

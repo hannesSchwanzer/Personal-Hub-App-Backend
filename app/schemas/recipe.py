@@ -2,6 +2,8 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel
 
+from app.schemas.nutrition import NutritionEntity
+
 class UnitType(str, Enum):
     miligrams = "miligrams"
     grams = "grams"
@@ -33,16 +35,6 @@ class StepEntity(BaseModel):
     ingredients: List[StepIngredientEntity]
     instruction: str
 
-class NutritionInfoEntity(BaseModel):
-    calories: Optional[int] = None
-    carbohydratesGrams: Optional[float] = None
-    sugarGrams: Optional[float] = None
-    proteinGrams: Optional[float] = None
-    fatGrams: Optional[float] = None
-    saturatedFatGrams: Optional[float] = None
-    sodiumMilligrams: Optional[float] = None
-    fiberGrams: Optional[float] = None
-
 class RecipeEntity(BaseModel):
     name: str
     description: str
@@ -50,7 +42,7 @@ class RecipeEntity(BaseModel):
     steps: List[StepEntity]
     servings: int
     duration: Optional[DurationEntity] = None
-    nutritionInfo: Optional[NutritionInfoEntity] = None
+    nutritionInfo: Optional[NutritionEntity] = None
     imageUrl: Optional[str] = None
 
 class DurationEntity(BaseModel):
