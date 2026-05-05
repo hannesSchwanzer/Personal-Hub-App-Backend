@@ -21,8 +21,10 @@ class FoodProductDB(Base):
 
     id: Mapped[UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     name: Mapped[str]
-    barcode: Mapped[str] = mapped_column(index=True)
+    barcode: Mapped[str] = mapped_column(index=True, unique=True)
     nutrition: Mapped[dict] = mapped_column(JSONB)
+    quantity: Mapped[str] = mapped_column(nullable=True)
+    nutritionFilledScore: Mapped[float]
 
     search_vector: Mapped[str] = mapped_column(
         TSVECTOR,

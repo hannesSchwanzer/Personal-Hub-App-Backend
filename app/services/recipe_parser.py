@@ -105,14 +105,14 @@ class RecipeParserService:
         # NUTRITION
         nutrition = data.get("nutrition", {})
         nutrition_entity = NutritionEntity(
-            calories=RecipeParserService._parse_int(nutrition.get("calories", 0)),
-            carbohydratesGrams=RecipeParserService._parse_float(nutrition.get("carbohydrateContent", 0)),
-            sugarGrams=RecipeParserService._parse_float(nutrition.get("sugarContent", 0)),
-            proteinGrams=RecipeParserService._parse_float(nutrition.get("proteinContent", 0)),
-            fatGrams=RecipeParserService._parse_float(nutrition.get("fatContent", 0)),
-            saturatedFatGrams=RecipeParserService._parse_float(nutrition.get("saturatedFatContent", 0)),
-            sodiumMilligrams=RecipeParserService._parse_float(nutrition.get("sodiumContent", 0)),
-            fiberGrams=RecipeParserService._parse_float(nutrition.get("fiberContent", 0)),
+            energy_kcal_100g=RecipeParserService._parse_int(nutrition.get("calories", 0)),
+            carbohydrates_100g=RecipeParserService._parse_float(nutrition.get("carbohydrateContent", 0)),
+            sugars_100g=RecipeParserService._parse_float(nutrition.get("sugarContent", 0)),
+            proteins_100g=RecipeParserService._parse_float(nutrition.get("proteinContent", 0)),
+            fat_100g=RecipeParserService._parse_float(nutrition.get("fatContent", 0)),
+            saturated_fat_100g=RecipeParserService._parse_float(nutrition.get("saturatedFatContent", 0)),
+            sodium_100g=RecipeParserService._parse_float(nutrition.get("sodiumContent", 0)),
+            fiber_100g=RecipeParserService._parse_float(nutrition.get("fiberContent", 0)),
         )
 
         # DURATION ENTITY

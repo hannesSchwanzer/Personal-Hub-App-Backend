@@ -67,6 +67,7 @@ class FoodRepository():
         product_rank = (
             func.ts_rank(FoodProductDB.search_vector, ts_query)
             - (func.length(FoodProductDB.name) / 100.0)
+            + FoodProductDB.nutritionFilledScore
         )
 
         product_stmt = (
@@ -81,13 +82,29 @@ class FoodRepository():
 
         union = generic_stmt.union_all(product_stmt).subquery()
 
+        # Window function to rank rows by lower(name), type, score desc
         stmt = (
-            select(union.c.id, union.c.name, union.c.type)
-            .order_by(union.c.score.desc())
+            select(
+                union.c.id,
+                union.c.name,
+                union.c.type,
+                union.c.score,
+                func.row_number().over(
+                    partition_by=[func.lower(union.c.name), union.c.type],
+                    order_by=union.c.score.desc()
+                ).label("rnum")
+            )
+        )
+        ranked = stmt.subquery()
+
+        final_stmt = (
+            select(ranked.c.id, ranked.c.name, ranked.c.type)
+            .where(ranked.c.rnum == 1)
+            .order_by(ranked.c.score.desc())
             .limit(limit)
         )
 
-        result = await self.db.execute(stmt)
+        result = await self.db.execute(final_stmt)
         rows = result.all()
 
         return [
