@@ -1,8 +1,8 @@
 """add search + nutrition indexes
 
-Revision ID: c23a1c2d00fc
-Revises: 914e73cd9efe
-Create Date: 2026-05-05 17:20:03.910806
+Revision ID: 840ebd6a3ba3
+Revises: b4c867333589
+Create Date: 2026-05-05 23:54:14.085510
 
 """
 from typing import Sequence, Union
@@ -12,11 +12,10 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'c23a1c2d00fc'
-down_revision: Union[str, Sequence[str], None] = '914e73cd9efe'
+revision: str = '840ebd6a3ba3'
+down_revision: Union[str, Sequence[str], None] = 'b4c867333589'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
-
 
 def upgrade():
     op.execute("""CREATE EXTENSION IF NOT EXISTS pg_trgm;""")

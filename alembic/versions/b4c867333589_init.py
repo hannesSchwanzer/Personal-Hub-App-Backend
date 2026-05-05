@@ -1,8 +1,8 @@
 """init
 
-Revision ID: 914e73cd9efe
+Revision ID: b4c867333589
 Revises: 
-Create Date: 2026-05-05 17:17:11.787829
+Create Date: 2026-05-05 23:54:03.816409
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '914e73cd9efe'
+revision: str = 'b4c867333589'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -33,10 +33,12 @@ def upgrade() -> None:
     sa.Column('name', sa.String(), nullable=False),
     sa.Column('barcode', sa.String(), nullable=False),
     sa.Column('nutrition', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('quantity', sa.String(), nullable=True),
+    sa.Column('nutritionFilledScore', sa.Float(), nullable=False),
     sa.Column('search_vector', postgresql.TSVECTOR(), sa.Computed("to_tsvector('simple', name)", persisted=True), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_products_barcode'), 'products', ['barcode'], unique=False)
+    op.create_index(op.f('ix_products_barcode'), 'products', ['barcode'], unique=True)
     # ### end Alembic commands ###
 
 
