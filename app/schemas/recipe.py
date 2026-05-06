@@ -35,6 +35,11 @@ class StepEntity(BaseModel):
     ingredients: List[StepIngredientEntity]
     instruction: str
 
+class DurationEntity(BaseModel):
+    prepTimeMinutes: Optional[int] = None
+    cookTimeMinutes: Optional[int] = None
+    restTimeMinutes: Optional[int] = None
+
 class RecipeEntity(BaseModel):
     name: str
     description: str
@@ -44,9 +49,4 @@ class RecipeEntity(BaseModel):
     duration: Optional[DurationEntity] = None
     nutritionInfo: Optional[NutritionEntity] = None
     imageUrl: Optional[str] = None
-
-class DurationEntity(BaseModel):
-    prepTimeMinutes: Optional[int] = None
-    cookTimeMinutes: Optional[int] = None
-    restTimeMinutes: Optional[int] = None
 

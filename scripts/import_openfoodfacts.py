@@ -276,8 +276,8 @@ async def main():
 
     file_path = Path("off_products.jsonl.gz")
 
-    # print("Downloading dataset...")
-    # download_file(url, file_path)
+    print("Downloading dataset...")
+    download_file(url, file_path)
 
     print("Importing into database...")
     await import_file(str(file_path))

@@ -28,7 +28,24 @@ def get_oauth_fatsecret() -> Tuple[str, str]:
         raise RuntimeError("FATSECRET_CLIENT_ID and FATSECRET_CLIENT_SECRET must be set in environment.")
     return client_id, client_secret
 
-def get_database_url() -> str:
+def get_database_url_async() -> str:
+    """
+    Build and return the PostgreSQL connection URL from environment variables.
+    Uses POSTGRES_* variables only. Raises RuntimeError if required variables are missing.
+    """
+    user = os.environ.get("POSTGRES_USER")
+    password = os.environ.get("POSTGRES_PASSWORD")
+    host = os.environ.get("POSTGRES_HOST")
+    port = os.environ.get("POSTGRES_PORT")
+    dbname = os.environ.get("POSTGRES_DB")
+
+    if not user or not password or not dbname or not host or not port:
+        raise RuntimeError("PostgreSQL connection details (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_HOST, POSTGRES_PORT) must be set in environment.")
+
+    return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{dbname}"
+
+
+def get_database_url_sync() -> str:
     """
     Build and return the PostgreSQL connection URL from environment variables.
     Uses POSTGRES_* variables only. Raises RuntimeError if required variables are missing.
@@ -43,4 +60,3 @@ def get_database_url() -> str:
         raise RuntimeError("PostgreSQL connection details (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, POSTGRES_HOST, POSTGRES_PORT) must be set in environment.")
 
     return f"postgresql://{user}:{password}@{host}:{port}/{dbname}"
-

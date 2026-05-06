@@ -8,3 +8,7 @@ openai
 github-copilot-sdk
 isodate
 python-multipart
+sqlalchemy 
+asyncpg 
+alembic 
+psycopg2-binary
