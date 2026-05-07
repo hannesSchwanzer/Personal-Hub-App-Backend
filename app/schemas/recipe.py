@@ -1,24 +1,9 @@
-from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel
 
 from app.schemas.nutrition import NutritionEntity
+from app.schemas.unittype import UnitType
 
-class UnitType(str, Enum):
-    miligrams = "miligrams"
-    grams = "grams"
-    kilograms = "kilograms"
-    ounces = "ounces"
-    pounds = "pounds"
-    milliliters = "milliliters"
-    liters = "liters"
-    fluidOunces = "fluidOunces"
-    gallons = "gallons"
-    pieces = "pieces"
-    teaspoons = "teaspoons"
-    tablespoons = "tablespoons"
-    centimeters = "centimeters"
-    pinches = "pinches"
 
 class IngredientEntity(BaseModel):
     name: str

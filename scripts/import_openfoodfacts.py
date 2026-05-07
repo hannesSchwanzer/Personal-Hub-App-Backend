@@ -1,7 +1,8 @@
 import gzip
 import json
+import re
+from typing import Optional
 from uuid import uuid4
-import os
 import requests
 from pathlib import Path
 import asyncio
@@ -14,6 +15,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import FoodProductDB
 from app.db.session import AsyncSessionLocal
+from app.schemas import NutritionEntity
+from app.schemas.unittype import UnitType
 
 OFF_URL = "https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz"
 
@@ -68,56 +71,107 @@ def merge_nutrition(existing: dict, new: dict) -> tuple[dict, bool]:
 
     return merged, has_conflict
 
+def get_nutrition(p: dict) -> dict | None:
+    def from_nutrition(nutrition: Optional[dict]) -> Optional[NutritionEntity]:
+        if not nutrition:
+            return None
+
+        nutrients: dict = {}
+        unit_set = None
+        per_quantity = None
+
+        if "aggregated_set" in nutrition and "nutrients" in nutrition["aggregated_set"]:
+            nutrients = nutrition["aggregated_set"]["nutrients"]
+            unit_set = nutrition["aggregated_set"].get("per")
+        elif "input_sets" in nutrition and nutrition["input_sets"]:
+            nutrients = nutrition["input_sets"][0]["nutrients"]
+            unit_set = nutrition["input_sets"][0].get("per")
+            per_quantity = nutrition["input_sets"][0].get("per_quantity")
+        else:
+            return None
+
+        NUT_KEYS = {
+            "energy_kcal": ["energy-kcal"],
+            "carbohydrates": ["carbohydrates"],
+            "proteins": ["proteins"],
+            "fat": ["fat"],
+            "sugars": ["sugars", "added-sugars"],
+            "saturated_fat": ["saturated-fat"],
+            "sodium": ["sodium"],
+        }
+        nutrition_args = {}
+        for model_key, keys in NUT_KEYS.items():
+            value = None
+            for k in keys:
+                n = nutrients.get(k)
+                if n and "value" in n:
+                    value = n["value"]
+                    break
+            nutrition_args[model_key] = value
+        if unit_set:
+            nutrition_args["quantity_unit"] = UnitType.from_string(unit_set)
+            
+            unit_number_filtered = ''.join(filter(lambda c: c.isdigit() or c == '.', str(unit_set)))
+            if unit_number_filtered:
+                nutrition_args["per_quantity"] = float(unit_number_filtered)
+
+        if not nutrition_args.get("quantity_unit") and per_quantity is not None:
+            nutrition_args["per_quantity"] = per_quantity
+        if any(v is not None for v in nutrition_args.values()):
+            return NutritionEntity(**nutrition_args)
+        return None
+
+    def from_nutriments(nutriments: Optional[dict]) -> Optional[NutritionEntity]:
+        if not nutriments:
+            return None
+        NUT_KEYS = {
+            "energy_kcal": ["energy-kcal_100g", "energy-kcal", "energy_100g", "energy"],
+            "carbohydrates": ["carbohydrates_100g", "carbohydrates"],
+            "proteins": ["proteins_100g", "proteins"],
+            "fat": ["fat_100g", "fat"],
+            "sugars": ["sugars_100g", "sugars"],
+            "saturated_fat": ["saturated-fat_100g", "saturated-fat"],
+            "sodium": ["sodium_100g", "sodium"],
+        }
+        nutrition_args = {}
+        for model_key, off_keys in NUT_KEYS.items():
+            value = None
+            for off_key in off_keys:
+                if off_key in nutriments:
+                    value = nutriments[off_key]
+                    break
+            nutrition_args[model_key] = value
+
+        # assume it is always 100g
+        nutrition_args["quantity_unit"] = UnitType.grams
+        nutrition_args["per_quantity"] = 100.0
+
+        if any(v is not None for v in nutrition_args.values()):
+            return NutritionEntity(**nutrition_args)
+        return None
+
+    nutrition = from_nutrition(p.get("nutrition"))
+
+    if not nutrition:
+        nutrition = from_nutriments(p.get("nutriments"))
+
+    if not nutrition:
+        nutrition = from_nutriments(p.get("nutriments_estimated"))
+
+    return nutrition.dict() if nutrition else {}
 
 def map_product(p: dict) -> FoodProductDB | None:
     name = p.get("product_name") # Maybe "generic_name"
     code = p.get("code")
     quantity = p.get("quantity")
+    brand = p.get("brands")
 
     if not name or not code:
         return None
 
-    nutriments = p.get("nutriments", {})
+    nutrition = get_nutrition(p)
 
-    # Map OpenFoodFacts nutriments fields to our NutritionEntity fields
-    NUTRITION_KEYS = {
-        "energy_kcal_100g": "energy-kcal_100g",
-        "carbohydrates_100g": "carbohydrates_100g",
-        "proteins_100g": "proteins_100g",
-        "fat_100g": "fat_100g",
-        "fiber_100g": "fiber_100g",
-        "sugars_100g": "sugars_100g",
-        "saturated_fat_100g": "saturated-fat_100g",
-        "sodium_100g": "sodium_100g",
-        "alcohol_100g": "alcohol_100g",
-        "omega_3_fat_100g": "omega-3-fat_100g",
-        "omega_6_fat_100g": "omega-6-fat_100g",
-        "trans_fat_100g": "trans-fat_100g",
-        "vitamin_c_100g": "vitamin-c_100g",
-        "vitamin_d_100g": "vitamin-d_100g",
-        "vitamin_b12_100g": "vitamin-b12_100g",
-        "calcium_100g": "calcium_100g",
-        "iron_100g": "iron_100g",
-        "magnesium_100g": "magnesium_100g",
-        "potassium_100g": "potassium_100g",
-        "zinc_100g": "zinc_100g",
-    }
-    nutrition = {}
-    for internal_key, off_key in NUTRITION_KEYS.items():
-        value = nutriments.get(off_key)
-        if value is not None:
-            # Convert types; use int for energy, else float for others
-            try:
-                if internal_key == "energy_kcal_100g":
-                    nutrition[internal_key] = int(float(value))
-                else:
-                    nutrition[internal_key] = float(value)
-            except (ValueError, TypeError):
-                nutrition[internal_key] = None
-        else:
-            nutrition[internal_key] = None
-
-    nutritionFilledScore = get_nutrition_filled_score(nutrition)
+    completeness_score = p.get("completeness", 0.0)
 
     return FoodProductDB(
         id=uuid4(),
@@ -125,7 +179,8 @@ def map_product(p: dict) -> FoodProductDB | None:
         barcode=code,
         nutrition=nutrition,
         quantity=quantity,
-        nutritionFilledScore=nutritionFilledScore,
+        completeness=completeness_score,
+        brand=brand,
     )
 
 async def process_batch(session: AsyncSession, batch: list[FoodProductDB]):
@@ -143,7 +198,7 @@ async def process_batch(session: AsyncSession, batch: list[FoodProductDB]):
 
         db_nutrition = db["nutrition"]
         db_score = db["score"]
-        new_score = product.nutritionFilledScore
+        new_score = product.completeness
 
         merged, conflict = merge_nutrition(db_nutrition, product.nutrition)
 
@@ -194,7 +249,7 @@ async def fetch_existing_products(session: AsyncSession, barcodes: list[str]):
     stmt = select(
         FoodProductDB.barcode,
         FoodProductDB.nutrition,
-        FoodProductDB.nutritionFilledScore,
+        FoodProductDB.completeness,
     ).where(FoodProductDB.barcode.in_(barcodes))
 
     result = await session.execute(stmt)
@@ -236,7 +291,7 @@ async def import_file(path: str, batch_size: int = 500):
                     if not conflict:
                         existing.nutrition = merged
                     else:
-                        if product.nutritionFilledScore > existing.nutritionFilledScore:
+                        if product.completeness > existing.nutritionFilledScore:
                             batch_by_barcode[code] = product
 
                     continue
@@ -270,6 +325,17 @@ def download_file(url: str, target_path: Path):
                 if chunk:
                     f.write(chunk)
                     pbar.update(len(chunk))
+
+def product_to_dict(p: FoodProductDB) -> dict:
+    return {
+        "id": str(p.id),
+        "name": p.name,
+        "barcode": p.barcode,
+        "nutrition": p.nutrition,
+        "quantity": p.quantity,
+        "completeness": p.completeness,
+        "brand": p.brand,
+    }
 
 async def main():
     url = OFF_URL

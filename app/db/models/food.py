@@ -24,7 +24,8 @@ class FoodProductDB(Base):
     barcode: Mapped[str] = mapped_column(index=True, unique=True)
     nutrition: Mapped[dict] = mapped_column(JSONB)
     quantity: Mapped[str] = mapped_column(nullable=True)
-    nutritionFilledScore: Mapped[float]
+    completeness: Mapped[float]
+    brand: Mapped[str] = mapped_column(nullable=True)
 
     search_vector: Mapped[str] = mapped_column(
         TSVECTOR,

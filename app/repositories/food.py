@@ -67,7 +67,7 @@ class FoodRepository():
         product_rank = (
             func.ts_rank(FoodProductDB.search_vector, ts_query)
             - (func.length(FoodProductDB.name) / 100.0)
-            + FoodProductDB.nutritionFilledScore
+            + FoodProductDB.completness
         )
 
         product_stmt = (
