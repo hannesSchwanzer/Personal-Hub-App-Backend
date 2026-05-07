@@ -1,5 +1,6 @@
 import gzip
 import json
+import os
 import re
 from typing import Optional
 from uuid import uuid4
@@ -332,17 +333,20 @@ def product_to_dict(p: FoodProductDB) -> dict:
 
 async def main():
     url = OFF_URL
-
-    file_path = Path("off_products.jsonl.gz")
-
-    print("Downloading dataset...")
-    download_file(url, file_path)
+    openfoodfacts_file = os.environ.get("OPENFOODFACTS_FILE")
+    if openfoodfacts_file:
+        file_path = Path(openfoodfacts_file)
+        assert file_path.exists(), f"File {file_path} does not exist"
+    else:
+        file_path = Path("off_products.jsonl.gz")
+        print("Downloading dataset...")
+        download_file(url, file_path)
 
     print("Importing into database...")
     await import_file(str(file_path))
 
-    print("Cleaning up...")
-    file_path.unlink()  # deletes file
+    # print("Cleaning up...")
+    # file_path.unlink()  # deletes file
 
     print("Done.")
 
