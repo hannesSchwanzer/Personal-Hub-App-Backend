@@ -20,25 +20,18 @@ from app.schemas.unittype import UnitType
 
 OFF_URL = "https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz"
 
-def get_nutrition_filled_score(nutrition: dict) -> float:
-    WEIGHTS = {
-        "energy_kcal_100g": 3.0,
-        "carbohydrates_100g": 2.0,
-        "proteins_100g": 2.0,
-        "fat_100g": 2.0,
-    }
-
-    DEFAULT_WEIGHT = 1.0
+def get_nutrition_filled_score(nutrition: dict | None) -> float:
+    if not nutrition:
+        return 0.0
 
     score = 0.0
     max_score = 0.0
 
-    for key, value in nutrition.items():
-        weight = WEIGHTS.get(key, DEFAULT_WEIGHT)
-        max_score += weight
+    for _, value in nutrition.items():
+        max_score += 1
 
         if value is not None:
-            score += weight
+            score += 1
 
     if max_score == 0:
         return 0.0
@@ -158,7 +151,7 @@ def get_nutrition(p: dict) -> dict | None:
     if not nutrition:
         nutrition = from_nutriments(p.get("nutriments_estimated"))
 
-    return nutrition.dict() if nutrition else {}
+    return nutrition.model_dump() if nutrition else {}
 
 def map_product(p: dict) -> FoodProductDB | None:
     name = p.get("product_name") # Maybe "generic_name"
@@ -171,7 +164,7 @@ def map_product(p: dict) -> FoodProductDB | None:
 
     nutrition = get_nutrition(p)
 
-    completeness_score = p.get("completeness", 0.0)
+    completeness_score = get_nutrition_filled_score(nutrition)
 
     return FoodProductDB(
         id=uuid4(),
