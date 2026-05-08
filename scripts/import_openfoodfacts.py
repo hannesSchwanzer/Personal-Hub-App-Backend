@@ -194,17 +194,13 @@ async def process_batch(session: AsyncSession, batch: list[FoodProductDB]):
         db_score = db["score"]
         new_score = product.completeness
 
-        merged, conflict = merge_nutrition(db_nutrition, product.nutrition)
-
-        if not conflict:
-            product.nutrition = merged
-            final_batch.append(product)
-            continue
-
+        # No merge: pick the nutrition with the better completeness score
         if new_score > db_score:
-            product.nutrition = merged
+            # Overwrite with new product
             final_batch.append(product)
-            continue
+        else:
+            # Keep the old (existing in DB)
+            pass
 
     if not final_batch:
         return
@@ -257,7 +253,6 @@ async def fetch_existing_products(session: AsyncSession, barcodes: list[str]):
     }
 
 async def import_file(path: str, batch_size: int = 500):
-    batch = []
     batch_by_barcode = {}
 
     async with AsyncSessionLocal() as session:
@@ -274,32 +269,20 @@ async def import_file(path: str, batch_size: int = 500):
 
                 code = product.barcode
 
+                # Always retain only the best product per barcode
                 if code in batch_by_barcode:
                     existing = batch_by_barcode[code]
+                    if product.completeness > existing.nutritionFilledScore:
+                        batch_by_barcode[code] = product
+                else:
+                    batch_by_barcode[code] = product
 
-                    merged, conflict = merge_nutrition(
-                        existing.nutrition,
-                        product.nutrition
-                    )
-
-                    if not conflict:
-                        existing.nutrition = merged
-                    else:
-                        if product.completeness > existing.nutritionFilledScore:
-                            batch_by_barcode[code] = product
-
-                    continue
-
-                batch.append(product)
-                batch_by_barcode[code] = product
-
-                if len(batch) >= batch_size:
-                    await process_batch(session, batch)
-                    batch = []
+                if len(batch_by_barcode) >= batch_size:
+                    await process_batch(session, list(batch_by_barcode.values()))
                     batch_by_barcode = {}
 
-            if batch:
-                await process_batch(session, batch)
+            if batch_by_barcode:
+                await process_batch(session, list(batch_by_barcode.values()))
 
 
 def download_file(url: str, target_path: Path):
