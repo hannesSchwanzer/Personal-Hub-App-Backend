@@ -3,6 +3,7 @@ from uuid import UUID
 from sqlalchemy import select, func, case, literal_column, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.mappers.food import food_product_to_entity
 from app.db.models import GenericFoodDB, FoodProductDB
 from app.schemas import FoodAutoFillEntity
 from app.schemas.food import FoodItemTemp, FoodProductEntity, GenericFoodEntity
@@ -14,33 +15,23 @@ class FoodRepository():
     async def get_by_id_and_type(self, id: UUID, type: Literal["generic", "product"]) -> Optional[Union[FoodProductEntity, GenericFoodEntity]]:
         pass
 
-    async def get_product_by_id(self, id: UUID) -> Optional[FoodItemTemp]:
+    async def get_product_by_id(self, id: UUID) -> Optional[FoodProductEntity]:
         result = await self.db.execute(
             select(FoodProductDB).where(FoodProductDB.id == id)
         )
         db_product = result.scalar_one_or_none()
         if not db_product:
             return None
-        return FoodItemTemp(
-            id=db_product.id,
-            name=db_product.name,
-            barcode=db_product.barcode,
-            nutriton=db_product.nutrition
-        )
+        return food_product_to_entity(db_product)
 
-    async def get_product_by_barcode(self, barcode: str) -> Optional[FoodItemTemp]:
+    async def get_product_by_barcode(self, barcode: str) -> Optional[FoodProductEntity]:
         result = await self.db.execute(
             select(FoodProductDB).where(FoodProductDB.barcode == barcode)
         )
         db_product = result.scalar_one_or_none()
         if not db_product:
             return None
-        return FoodItemTemp(
-            id=db_product.id,
-            name=db_product.name,
-            barcode=db_product.barcode,
-            nutriton=db_product.nutrition
-        )
+        return food_product_to_entity(db_product)
 
     async def get_generic_by_id(self, id: UUID) -> Optional[GenericFoodEntity]:
         pass
@@ -67,7 +58,7 @@ class FoodRepository():
         product_rank = (
             func.ts_rank(FoodProductDB.search_vector, ts_query)
             - (func.length(FoodProductDB.name) / 100.0)
-            + FoodProductDB.completness
+            + FoodProductDB.completeness
         )
 
         product_stmt = (

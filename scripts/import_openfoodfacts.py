@@ -212,7 +212,8 @@ async def process_batch(session: AsyncSession, batch: list[FoodProductDB]):
             "barcode": p.barcode,
             "nutrition": p.nutrition,
             "quantity": p.quantity,
-            "nutritionFilledScore": p.nutritionFilledScore,
+            "completeness": p.completeness,
+            "brand": p.brand,
         }
         for p in final_batch
     ]
@@ -225,7 +226,8 @@ async def process_batch(session: AsyncSession, batch: list[FoodProductDB]):
             "name": stmt.excluded.name,
             "nutrition": stmt.excluded.nutrition,
             "quantity": stmt.excluded.quantity,
-            "nutritionFilledScore": stmt.excluded.nutritionFilledScore,
+            "completeness": stmt.excluded.completeness,
+            "brand": stmt.excluded.brand,
         },
     )
 
@@ -272,7 +274,7 @@ async def import_file(path: str, batch_size: int = 500):
                 # Always retain only the best product per barcode
                 if code in batch_by_barcode:
                     existing = batch_by_barcode[code]
-                    if product.completeness > existing.nutritionFilledScore:
+                    if product.completeness > existing.completeness:
                         batch_by_barcode[code] = product
                 else:
                     batch_by_barcode[code] = product

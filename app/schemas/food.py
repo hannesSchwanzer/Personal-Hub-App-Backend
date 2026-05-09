@@ -4,8 +4,6 @@ from pydantic import BaseModel, Field
 
 from app.schemas.nutrition import NutritionEntity
 
-
-
 class GenericFoodEntity(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     name: str
@@ -16,15 +14,16 @@ class FoodProductEntity(BaseModel):
     name: str
     nutrition: NutritionEntity
     barcode: str
+    quantity: str
+    brand: str
 
 class FoodAutoFillEntity(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     name: str
     type: Literal["generic", "product"]
-    nutrition: Optional[NutritionEntity] = None
 
 class FoodItemTemp(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     name: str
     barcode: str
-    nutriton: dict
+    nutrition: dict

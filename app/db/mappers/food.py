@@ -23,6 +23,8 @@ def food_product_to_entity(db_obj: FoodProductDB) -> FoodProductEntity:
         name=db_obj.name,
         nutrition=NutritionEntity(**db_obj.nutrition),
         barcode=db_obj.barcode,
+        quantity=db_obj.quantity,
+        brand=db_obj.brand,
     )
 
 def food_product_to_db(entity: FoodProductEntity) -> FoodProductDB:
