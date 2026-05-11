@@ -231,7 +231,7 @@ async def generate_recipe_from_url(
     if use_ai:
         recipe = await generation_service.generate_recipe_from_url(url, input_language=input_language, output_language=output_language)
     else:
-        recipe = parser_service.extract_recipe_from_url(url)
+        recipe = await parser_service.extract_recipe_from_url(url)
     
     if recipe is None:
         raise HTTPException(status_code=400, detail="Could not extract recipe from the provided URL.")

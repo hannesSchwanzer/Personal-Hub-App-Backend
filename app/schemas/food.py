@@ -14,8 +14,8 @@ class FoodProductEntity(BaseModel):
     name: str
     nutrition: NutritionEntity
     barcode: str
-    quantity: str
-    brand: str
+    quantity: Optional[str]
+    brand: Optional[str]
 
 class FoodAutoFillEntity(BaseModel):
     id: UUID = Field(default_factory=uuid4)

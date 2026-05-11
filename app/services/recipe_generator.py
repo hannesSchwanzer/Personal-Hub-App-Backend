@@ -17,6 +17,7 @@ class RecipeGeneratorService:
 - For ingredients that contain preparation steps (e.g., “1 diced onion”), put the preparation in the additionalInfo field and use the base ingredient name (e.g., “onion”).
 - If instructions mention ingredients or amounts missing from the ingredient list (e.g., adding 100 ml water), add them to the ingredients.
 - Percent values must be represented as decimal numbers between 0 and 1.
+- If the nutrition is per serving, set quantity_unit to pieces and per_quantity to 1. If it's for the whole recipe, set per_quantity to the number of servings. If it is another quantity, set quantity_unit and per_quantity accordingly.
 
 Here is the JSON Schema you must adhere to (do not change its field names or add new enum types):\n{json.dumps(RecipeEntity.model_json_schema(), indent=2)}
 """
