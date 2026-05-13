@@ -114,7 +114,7 @@ Here is the JSON Schema you must adhere to (do not change its field names or add
 
         try:
             data = normalize_units(data)
-            recipe = RecipeEntity.model_validate(data)
+            recipe = RecipeEntity.from_dict_safe(data)
         except Exception as e:
             raise ValueError(f"Invalid recipe structure: {e}\nReceived: {data}")
         return recipe

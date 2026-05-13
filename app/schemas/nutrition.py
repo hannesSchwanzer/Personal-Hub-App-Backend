@@ -30,3 +30,9 @@ class NutritionEntity(BaseModel):
     # magnesium_100g: Optional[float] = None
     # potassium_100g: Optional[float] = None
     # zinc_100g: Optional[float] = None
+
+    @staticmethod
+    def from_dict_save(data: dict):
+        if data is None:
+            return NutritionEntity()
+        return NutritionEntity.model_validate(data)
