@@ -14,10 +14,10 @@ class IngredientEntity(BaseModel):
 
 class StepIngredientEntity(BaseModel):
     name: str
-    quantityPercent: float
+    quantityPercent: float = 1.0
 
 class StepEntity(BaseModel):
-    ingredients: List[StepIngredientEntity]
+    ingredients: List[StepIngredientEntity] = []
     instruction: str
 
 class DurationEntity(BaseModel):
@@ -27,11 +27,11 @@ class DurationEntity(BaseModel):
 
 class RecipeEntity(BaseModel):
     name: str
-    description: str
+    description: str = ""
     ingredients: List[IngredientEntity]
     steps: List[StepEntity]
-    servings: int
-    duration: Optional[DurationEntity] = None
-    nutritionInfo: Optional[NutritionEntity] = None
+    servings: int = 1
+    duration: Optional[DurationEntity] = DurationEntity()
+    nutritionInfo: Optional[NutritionEntity] = NutritionEntity()
     imageUrl: Optional[str] = None
 

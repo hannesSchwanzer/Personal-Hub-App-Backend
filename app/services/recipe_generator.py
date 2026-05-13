@@ -90,7 +90,7 @@ Here is the JSON Schema you must adhere to (do not change its field names or add
         if response is None:
             raise ValueError("No response data from LLM API.")
 
-        text = RecipeGeneratorService.extract_json_text(response)
+        text = RecipeGeneratorService._extract_json_text(response)
         text = str(text)
 
         # Try to parse and validate the output to the model
@@ -193,7 +193,7 @@ Here is the recipe:\n{recipe_text}"""
         return json_prompt
 
     @staticmethod
-    def extract_json_text(input_text):
+    def _extract_json_text(input_text):
         # Handles cases where text may be wrapped in triple backticks (optionally with 'json')
         lines = input_text.strip().splitlines()
 

@@ -13,56 +13,6 @@ from app.services.recipe_extractor import RecipeExtractorService
 
 
 class RecipeParserService:
-    UNIT_ABBREVIATIONS = {
-        # grams-German
-        "g": UnitType.grams,
-        "gram": UnitType.grams,
-        "gramm": UnitType.grams,
-        # kilograms
-        "kg": UnitType.kilograms,
-        "kilogram": UnitType.kilograms,
-        "kilogramm": UnitType.kilograms,
-        # milligrams
-        "mg": UnitType.miligrams,
-        "milligram": UnitType.miligrams,
-        "milligramm": UnitType.miligrams,
-        # ml (milliliter)
-        "ml": UnitType.milliliters,
-        "milliliter": UnitType.milliliters,
-        # cl
-        "cl": UnitType.milliliters,
-        # liters
-        "l": UnitType.liters,
-        "liter": UnitType.liters,
-        # tablespoons / EL
-        "el": UnitType.tablespoons,
-        "tbsp": UnitType.tablespoons,
-        "tablespoon": UnitType.tablespoons,
-        "eßl": UnitType.tablespoons,
-        # teaspoons / TL
-        "tl": UnitType.teaspoons,
-        "tsp": UnitType.teaspoons,
-        "teelöffel": UnitType.teaspoons,
-        # ounces
-        "oz": UnitType.ounces,
-        "ounce": UnitType.ounces,
-        # pounds
-        "lb": UnitType.pounds,
-        "pound": UnitType.pounds,
-        # pieces
-        "stück": UnitType.pieces,
-        "stk": UnitType.pieces,
-        "piece": UnitType.pieces,
-        "pcs": UnitType.pieces,
-        # pinches
-        "prise": UnitType.pinches,
-        "pinches": UnitType.pinches,
-        "prisen": UnitType.pinches,
-        # centimeters
-        "cm": UnitType.centimeters,
-        "zentimeter": UnitType.centimeters,
-    }
-
     def __init__(self) -> None:
         self.recipe_extractor_service = RecipeExtractorService()
 
@@ -219,9 +169,7 @@ class RecipeParserService:
             # Unit abbreviation mapping
             if unit_str:
                 lowered = unit_str.lower().replace(".", "")
-                unit = RecipeParserService.UNIT_ABBREVIATIONS.get(
-                    lowered, RecipeParserService._get_unit(unit_str)
-                )
+                unit = UnitType.from_string(lowered)
             # Name cleanup
             name = raw_name.strip()
             # Extract additional info in parenthesis at the end, only if preceded by space
