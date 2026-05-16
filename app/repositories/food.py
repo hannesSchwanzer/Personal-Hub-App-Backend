@@ -107,3 +107,12 @@ class FoodRepository():
             for row in rows
         ]
 
+    async def get_batch(self, limit: int, offset: int) -> List[FoodProductEntity]:
+        result = await self.db.execute(
+            select(FoodProductDB)
+            .order_by(FoodProductDB.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        rows = result.scalars().all()
+        return [food_product_to_entity(row) for row in rows]

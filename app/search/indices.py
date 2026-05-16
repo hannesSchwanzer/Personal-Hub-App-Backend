@@ -1,0 +1,1 @@
+FOODS_INDEX = "foods"

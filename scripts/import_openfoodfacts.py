@@ -1,7 +1,5 @@
 import gzip
 import json
-import os
-import re
 from typing import Optional
 from uuid import uuid4
 import requests
@@ -14,6 +12,7 @@ from tqdm import tqdm
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.models import FoodProductDB
 from app.db.session import AsyncSessionLocal
 from app.schemas import NutritionEntity
@@ -318,7 +317,7 @@ def product_to_dict(p: FoodProductDB) -> dict:
 
 async def main():
     url = OFF_URL
-    openfoodfacts_file = os.environ.get("OPENFOODFACTS_FILE")
+    openfoodfacts_file = settings.openfoodfacts_file
     if openfoodfacts_file:
         file_path = Path(openfoodfacts_file)
         assert file_path.exists(), f"File {file_path} does not exist"

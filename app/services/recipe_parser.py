@@ -22,7 +22,6 @@ class RecipeParserService:
 
     @staticmethod
     def extract_recipe_from_structured_data(structured_recipe: dict):
-
         if not structured_recipe or "data" not in structured_recipe:
             return None
         data = structured_recipe["data"]
@@ -62,6 +61,8 @@ class RecipeParserService:
             fat=RecipeParserService._parse_float(nutrition.get("fatContent", 0)),
             saturated_fat=RecipeParserService._parse_float(nutrition.get("saturatedFatContent", 0)),
             sodium=RecipeParserService._parse_float(nutrition.get("sodiumContent", 0)),
+            quantity_unit=UnitType.pieces, # One Serving
+            per_quantity=1,
         )
 
         # DURATION ENTITY

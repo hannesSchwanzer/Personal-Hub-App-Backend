@@ -9,7 +9,7 @@ from PIL import Image
 from copilot import CopilotClient, SubprocessConfig
 from copilot.session import PermissionRequestResult
 
-from app.utils.env import get_user_token_copilot, get_user_token_openrouter
+from app.core.config import settings
 
 logger = logging.getLogger("app.services.llm_request_service")
 
@@ -65,7 +65,7 @@ class CopilotRequestService(LlmRequestService):
         super().__init__()
         self.model = model
         config = SubprocessConfig(
-            env={"COPILOT_GITHUB_TOKEN": get_user_token_copilot()}
+            env={"COPILOT_GITHUB_TOKEN": settings.copilot_github_token},
         )
         self.client = CopilotClient(config=config)
         self.started = False
