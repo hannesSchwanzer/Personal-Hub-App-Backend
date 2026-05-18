@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, Tuple, Union
 from uuid import UUID
 from sqlalchemy import select, func, case, literal_column, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.mappers.food import food_product_to_entity
 from app.db.models import GenericFoodDB, FoodProductDB
 from app.schemas import FoodAutoFillEntity
-from app.schemas.food import FoodItemTemp, FoodProductEntity, GenericFoodEntity
+from app.schemas.food import FoodItemTemp, FoodProductEntity, FoodType, GenericFoodEntity
 
 class FoodRepository():
     def __init__(self, db: AsyncSession):
@@ -116,3 +116,9 @@ class FoodRepository():
         )
         rows = result.scalars().all()
         return [food_product_to_entity(row) for row in rows]
+
+    async def get_autofill_entites_by_ids(self, ids_with_type: List[Tuple[UUID, str]]) -> List[FoodAutoFillEntity]:
+        ids_product = [id for id, type in ids_with_type if type == FoodType.PRODUCT.value]
+        ids_generic = [id for id, type in ids_with_type if type == FoodType.GENERIC.value]
+
+        # TODO: Write orm command

@@ -1,12 +1,9 @@
-from typing import Iterator
+from typing import Iterator, List
 
-from sqlalchemy.orm import Session
-
-from app.db.session import SessionLocal
-from app.repositories.food_repository import FoodRepository
-
-from app.search.mappers.food_search_mapper import to_search_document
+from app.repositories.food import FoodRepository
 from app.search.repositories.food_search_repository import FoodSearchRepository
+from app.schemas.food import FoodProductEntity
+from app.search.mappers.food_search_mapper import product_to_search_document
 
 
 class FoodIndexer:
@@ -16,12 +13,14 @@ class FoodIndexer:
 
     def __init__(
         self,
+        food_repo: FoodRepository,
+        food_search_repo: FoodSearchRepository,
         batch_size: int = 500,
     ):
         self.batch_size = batch_size
 
-        self.food_repo = FoodRepository()
-        self.search_repo = FoodSearchRepository()
+        self.food_repo = food_repo
+        self.search_repo = food_search_repo
 
     # -------------------------
     # PUBLIC API
@@ -38,7 +37,7 @@ class FoodIndexer:
         total = 0
 
         for batch in self._iterate_food_batches():
-            docs = [to_search_document(food) for food in batch]
+            docs = [product_to_search_document(food) for food in batch]
 
             task_id = self.search_repo.add_or_update_many(docs)
 
@@ -65,42 +64,26 @@ class FoodIndexer:
 
         print(f"Indexed food {food_id} (task {task_id})")
 
-    def delete_food(self, food_id: int):
-        """
-        Remove from index (for deletions).
-        """
-
-        task_id = self.search_repo.delete(food_id)
-
-        print(f"Deleted food {food_id} (task {task_id})")
-
     # -------------------------
     # INTERNAL BATCHING
     # -------------------------
 
-    def _iterate_food_batches(self) -> Iterator[list]:
+    def _iterate_food_batches(self) -> Iterator[List[FoodProductEntity]]:
         """
         Streams foods from Postgres in batches to avoid memory issues.
         """
+        offset = 0
 
-        db: Session = SessionLocal()
-
-        try:
-            offset = 0
-
-            while True:
-                batch = (
-                    self.food_repo.get_batch(
-                        limit=self.batch_size,
-                        offset=offset,
-                    )
+        while True:
+            batch = (
+                self.food_repo.get_batch(
+                    limit=self.batch_size,
+                    offset=offset,
                 )
+            )
 
-                if not batch:
-                    break
+            if not batch:
+                break
 
-                yield batch
-                offset += self.batch_size
-
-        finally:
-            db.close()
+            yield batch
+            offset += self.batch_size

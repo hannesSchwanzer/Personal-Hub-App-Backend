@@ -1,4 +1,4 @@
-
+from uuid import UUID
 from app.schemas.food import FoodProductEntity, FoodType
 from app.search.documents.food_document import FoodDocument
 
