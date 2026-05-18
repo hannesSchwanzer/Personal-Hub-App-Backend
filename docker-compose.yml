@@ -27,7 +27,7 @@ services:
       retries: 10
 
   meilisearch:
-    image: getmeili/meilisearch:v1.15
+    image: getmeili/meilisearch:latest
     container_name: fooddb_meilisearch
     restart: always
 
@@ -44,10 +44,11 @@ services:
       - meili_data:/meili_data
 
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--spider", "http://localhost:7700/health"]
-      interval: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 20s
 
   migrate:
     build: .
