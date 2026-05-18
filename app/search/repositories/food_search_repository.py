@@ -10,7 +10,7 @@ class FoodSearchRepository:
         self.client = client
         self.index = self.client.index(FOODS_INDEX)
 
-    def add_or_update(self, doc: FoodDocument):
+    async def add_or_update(self, doc: FoodDocument):
         """
         Insert or update a single food document.
         """
@@ -25,7 +25,7 @@ class FoodSearchRepository:
         task = self.index.add_documents(payload)
         return task.task_uid
 
-    def delete(self, food_id: int):
+    def delete(self, food_id: str):
         """
         Remove document from index.
         """

@@ -20,9 +20,9 @@ class FoodProductEntity(BaseModel):
     nutrition: NutritionEntity
     barcode: str
     quantity: Optional[str]
+    completeness_score: float = 0
     brand: Optional[str]
     categories: List[str]
-    completeness_score: float
 
 class FoodAutoFillEntity(BaseModel):
     id: UUID = Field(default_factory=uuid4)

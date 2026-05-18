@@ -4,8 +4,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from app.dependencies.repositories import get_food_repository
+from app.dependencies.services import get_food_service
 from app.repositories.food import FoodRepository
-from app.schemas.food import FoodAutoFillEntity, FoodItemTemp, FoodProductEntity
+from app.schemas.food import FoodAutoFillEntity, FoodProductEntity
+from app.services.food_service import FoodService
 
 router = APIRouter(prefix="/food", tags=["food"])
 logger = logging.getLogger(__name__)
@@ -14,9 +16,9 @@ logger = logging.getLogger(__name__)
 async def search_food_item(
     query: str,
     limit: int = 10,
-    repo: FoodRepository = Depends(get_food_repository),
+    service: FoodService = Depends(get_food_service),
 ):
-    return await repo.search_autofill(query, limit=limit)
+    return await service.search_autofill(query, limit)
 
 @router.get("/getById", response_model=Optional[FoodProductEntity])
 async def get_by_id(

@@ -1,5 +1,5 @@
 from meilisearch import Client
-from core.config import settings
+from app.core.config import settings
 
 client = Client(
     settings.meili_url,

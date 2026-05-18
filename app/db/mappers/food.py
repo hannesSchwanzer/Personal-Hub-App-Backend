@@ -24,7 +24,9 @@ def food_product_to_entity(db_obj: FoodProductDB) -> FoodProductEntity:
         nutrition=NutritionEntity(**db_obj.nutrition),
         barcode=db_obj.barcode,
         quantity=db_obj.quantity,
+        completeness_score=db_obj.completeness_score,
         brand=db_obj.brand,
+        categories=db_obj.categories,
     )
 
 def food_product_to_db(entity: FoodProductEntity) -> FoodProductDB:
@@ -33,4 +35,8 @@ def food_product_to_db(entity: FoodProductEntity) -> FoodProductDB:
         name=entity.name,
         nutrition=entity.nutrition.model_dump(),
         barcode=entity.barcode,
+        quantity=entity.quantity,
+        completeness_score=entity.completeness_score,
+        brand=entity.brand,
+        categories=entity.categories,
     )

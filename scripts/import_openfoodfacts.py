@@ -1,42 +1,24 @@
 import gzip
 import json
 from typing import Optional
-from uuid import uuid4
 import requests
 from pathlib import Path
 import asyncio
 from pathlib import Path
-from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert
 from tqdm import tqdm
-
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.models import FoodProductDB
-from app.db.session import AsyncSessionLocal
+from app.db.session import AsyncSessionLocal, get_db
+from app.repositories.food import FoodRepository
 from app.schemas import NutritionEntity
+from app.schemas.food import FoodProductEntity
 from app.schemas.unittype import UnitType
+from app.search.client import get_search_client
+from app.search.repositories.food_search_repository import FoodSearchRepository
+from app.services.food_service import FoodService
 
 OFF_URL = "https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz"
-
-def get_nutrition_filled_score(nutrition: dict | None) -> float:
-    if not nutrition:
-        return 0.0
-
-    score = 0.0
-    max_score = 0.0
-
-    for _, value in nutrition.items():
-        max_score += 1
-
-        if value is not None:
-            score += 1
-
-    if max_score == 0:
-        return 0.0
-
-    return score / max_score  # normalized 0–1
 
 def merge_nutrition(existing: dict, new: dict) -> tuple[dict, bool]:
     """
@@ -64,7 +46,7 @@ def merge_nutrition(existing: dict, new: dict) -> tuple[dict, bool]:
 
     return merged, has_conflict
 
-def get_nutrition(p: dict) -> dict | None:
+def get_nutrition(p: dict) -> NutritionEntity | None:
     def from_nutrition(nutrition: Optional[dict]) -> Optional[NutritionEntity]:
         if not nutrition:
             return None
@@ -151,9 +133,20 @@ def get_nutrition(p: dict) -> dict | None:
     if not nutrition:
         nutrition = from_nutriments(p.get("nutriments_estimated"))
 
-    return nutrition.model_dump() if nutrition else {}
+    return nutrition
 
-def map_product(p: dict) -> FoodProductDB | None:
+def get_categories(p: dict) -> list[str]:
+    categories = p.get("categories")
+    if not categories:
+        return []
+    if isinstance(categories, str):
+        return [c.strip() for c in categories.split(",") if c.strip()]
+    elif isinstance(categories, list):
+        return [c.strip() for c in categories if isinstance(c, str) and c.strip()]
+    else:
+        return []
+
+def map_product(p: dict) -> FoodProductEntity | None:
     name = p.get("product_name") # Maybe "generic_name"
     code = p.get("code")
     quantity = p.get("quantity")
@@ -163,127 +156,58 @@ def map_product(p: dict) -> FoodProductDB | None:
         return None
 
     nutrition = get_nutrition(p)
+    categories = get_categories(p)
 
-    completeness_score = get_nutrition_filled_score(nutrition)
-
-    return FoodProductDB(
-        id=uuid4(),
+    return FoodProductEntity(
         name=name,
         barcode=code,
-        nutrition=nutrition,
+        nutrition=nutrition if nutrition else NutritionEntity(),
         quantity=quantity,
-        completeness=completeness_score,
         brand=brand,
+        categories=categories,
     )
 
-async def process_batch(session: AsyncSession, batch: list[FoodProductDB]):
-    barcodes = [p.barcode for p in batch]
+async def get_food_serive() -> FoodService:
+    db = await get_db()
+    food_repo = FoodRepository(db)
 
-    db_products = await fetch_existing_products(session, barcodes)
+    client = await get_search_client()
+    food_search_repository = FoodSearchRepository(client)
 
-    final_batch = []
-    for product in batch:
-        db = db_products.get(product.barcode)
-
-        if not db:
-            final_batch.append(product)
-            continue
-
-        db_nutrition = db["nutrition"]
-        db_score = db["score"]
-        new_score = product.completeness
-
-        # No merge: pick the nutrition with the better completeness score
-        if new_score > db_score:
-            # Overwrite with new product
-            final_batch.append(product)
-        else:
-            # Keep the old (existing in DB)
-            pass
-
-    if not final_batch:
-        return
-
-    values = [
-        {
-            "id": p.id,
-            "name": p.name,
-            "barcode": p.barcode,
-            "nutrition": p.nutrition,
-            "quantity": p.quantity,
-            "completeness": p.completeness,
-            "brand": p.brand,
-        }
-        for p in final_batch
-    ]
-
-    stmt = insert(FoodProductDB).values(values)
-
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["barcode"],
-        set_={
-            "name": stmt.excluded.name,
-            "nutrition": stmt.excluded.nutrition,
-            "quantity": stmt.excluded.quantity,
-            "completeness": stmt.excluded.completeness,
-            "brand": stmt.excluded.brand,
-        },
-    )
-
-    await session.execute(stmt)
-    await session.commit()
-
-async def fetch_existing_products(session: AsyncSession, barcodes: list[str]):
-    if not barcodes:
-        return {}
-
-    stmt = select(
-        FoodProductDB.barcode,
-        FoodProductDB.nutrition,
-        FoodProductDB.completeness,
-    ).where(FoodProductDB.barcode.in_(barcodes))
-
-    result = await session.execute(stmt)
-
-    return {
-        barcode: {
-            "nutrition": nutrition or {},
-            "score": score or 0.0,
-        }
-        for barcode, nutrition, score in result.all()
-    }
+    return FoodService(food_repo=food_repo, food_search_repo=food_search_repository)
 
 async def import_file(path: str, batch_size: int = 500):
+    food_service = await get_food_serive()
+
     batch_by_barcode = {}
 
-    async with AsyncSessionLocal() as session:
-        with gzip.open(path, "rt", encoding="utf-8") as f:
-            for line in tqdm(f, desc="Importing products"):
-                try:
-                    p = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
+    with gzip.open(path, "rt", encoding="utf-8") as f:
+        for line in tqdm(f, desc="Importing products"):
+            try:
+                p = json.loads(line)
+            except json.JSONDecodeError:
+                continue
 
-                product = map_product(p)
-                if not product:
-                    continue
+            product = map_product(p)
+            if not product:
+                continue
 
-                code = product.barcode
+            code = product.barcode
 
-                # Always retain only the best product per barcode
-                if code in batch_by_barcode:
-                    existing = batch_by_barcode[code]
-                    if product.completeness > existing.completeness:
-                        batch_by_barcode[code] = product
-                else:
+            # Always retain only the best product per barcode
+            if code in batch_by_barcode:
+                existing = batch_by_barcode[code]
+                if product.completeness_score > existing.completeness_score:
                     batch_by_barcode[code] = product
+            else:
+                batch_by_barcode[code] = product
 
-                if len(batch_by_barcode) >= batch_size:
-                    await process_batch(session, list(batch_by_barcode.values()))
-                    batch_by_barcode = {}
+            if len(batch_by_barcode) >= batch_size:
+                await food_service.add_products_conditional(list(batch_by_barcode.values()))
+                batch_by_barcode = {}
 
-            if batch_by_barcode:
-                await process_batch(session, list(batch_by_barcode.values()))
+        if batch_by_barcode:
+            await food_service.add_products_conditional(list(batch_by_barcode.values()))
 
 
 def download_file(url: str, target_path: Path):
@@ -311,7 +235,7 @@ def product_to_dict(p: FoodProductDB) -> dict:
         "barcode": p.barcode,
         "nutrition": p.nutrition,
         "quantity": p.quantity,
-        "completeness": p.completeness,
+        "completeness": p.completeness_score,
         "brand": p.brand,
     }
 
