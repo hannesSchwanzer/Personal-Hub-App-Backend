@@ -174,7 +174,7 @@ class OpenRouterRequestService(LlmRequestService):
     def __init__(self):
         super().__init__()
         self.client = openai.OpenAI(
-            api_key=get_user_token_openrouter(),
+            api_key=settings.openrouter_api_key,
             base_url=self.BASE_URL,
         )
         self.recent_models = dict()

@@ -2,7 +2,7 @@ from typing import List
 from meilisearch import Client
 
 from app.search.documents.food_document import FoodDocument
-from indices import FOODS_INDEX
+from app.search.indices import FOODS_INDEX
 
 
 class FoodSearchRepository:
