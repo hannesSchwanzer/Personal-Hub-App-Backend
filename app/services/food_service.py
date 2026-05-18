@@ -115,8 +115,12 @@ class FoodService:
     def _prepare_prodcut_for_insert(item: FoodProductEntity) -> FoodProductEntity:
         item.completeness_score = FoodService._get_nutrition_filled_score(item.nutrition.model_dump())
         item.id = item.id or UUID()  # generate new UUID if not provided
+        item.name = FoodService._clean_string(item.name)
+        item.barcode = FoodService._clean_string(item.barcode)
+        item.brand = FoodService._clean_string(item.brand) if item.brand else None
+        for category in item.categories:
+            category = FoodService._clean_string(category)
         return item
-
 
     @staticmethod
     def _get_nutrition_filled_score(nutrition: dict | None) -> float:
@@ -137,3 +141,10 @@ class FoodService:
 
         return score / max_score  # normalized 0–1
 
+    @staticmethod
+    def _clean_string(s: str) -> str:
+        cleaned = s.strip()
+        cleaned = cleaned.encode('utf-8', errors='replace').decode('utf-8', errors='replace')  # remove non-UTF-8 chars
+        cleaned = cleaned.replace('\x00', '')  # remove null bytes
+
+        return cleaned

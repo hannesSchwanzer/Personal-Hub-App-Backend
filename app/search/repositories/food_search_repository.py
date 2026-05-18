@@ -10,7 +10,7 @@ class FoodSearchRepository:
         self.client = client
         self.index = self.client.index(FOODS_INDEX)
 
-    async def add_or_update(self, doc: FoodDocument):
+    def add_or_update(self, doc: FoodDocument):
         """
         Insert or update a single food document.
         """

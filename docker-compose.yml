@@ -54,8 +54,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      meilisearch:
-        condition: service_healthy
     env_file:
       - .env
     command: ["alembic", "upgrade", "head"]
@@ -65,7 +63,6 @@ services:
     depends_on:
       meilisearch:
         condition: service_healthy
-
     env_file:
       - .env
 
@@ -74,14 +71,17 @@ services:
   import:
     build: .
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
     env_file:
       - .env
     command: ["python", "-m", "scripts.import_openfoodfacts"]
-    # environment:
-    #   - OPENFOODFACTS_FILE=/data/openfoodfacts.json
-    # volumes:
-    #   - /data/openfoodfacts.json:/data/openfoodfacts.json
+    environment:
+      - OPENFOODFACTS_FILE=/data/openfoodfacts.json
+    volumes:
+      - /data/openfoodfacts.json:/data/openfoodfacts.json
 
 
 volumes:

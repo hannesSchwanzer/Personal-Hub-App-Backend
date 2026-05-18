@@ -13,9 +13,13 @@ docker compose build
 
 # Start DB
 docker compose up -d db
+docker compose up -d meilisearch
 
 # Run migrations
 docker compose run --rm migrate
+docker compose run --rm meilisearch_setup
+
+docker compose run --rm seed
 
 # Import data
 docker compose run --rm import

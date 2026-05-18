@@ -143,3 +143,4 @@ class FoodRepository():
             )
             for row in generics
         ]
+
